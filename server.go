@@ -48,11 +48,6 @@ func NewServer(db *Database) (*Server, error) {
 	return server, nil
 }
 
-type authMiddleware struct {
-	accesskey  string
-	refreshkey string
-}
-
 func (a authMiddleware) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := strings.Split(r.Header.Get("Authentication"), "Bearer ")
@@ -70,10 +65,14 @@ func (a authMiddleware) Middleware(next http.Handler) http.Handler {
 
 			if claims, ok := token.Claims.(*AuthClaims); ok && token.Valid {
 				ctx := context.WithValue(r.Context(), ContextKey("props"), claims.UserID)
-				// Access context values in handlers like this
-				// props, _ := r.Context().Value("props").(jwt.MapClaims)
 				next.ServeHTTP(w, r.WithContext(ctx))
 			} else {
+				if claims.ExpiresAt > time.Now().Unix() {
+					w.WriteHeader(http.StatusUnauthorized)
+					w.Write([]byte("Expired Token"))
+					return
+				}
+
 				fmt.Println(err)
 				w.WriteHeader(http.StatusUnauthorized)
 				w.Write([]byte("Unauthorized"))
@@ -82,27 +81,27 @@ func (a authMiddleware) Middleware(next http.Handler) http.Handler {
 	})
 }
 
-func (s Server) createAccessToken(user_id string, expTime time.Time) (string, error) {
+func (s Server) createAccessToken(userID string, expTime time.Time) (string, error) {
 	t := jwt.New(jwt.GetSigningMethod("RS256"))
 	t.Claims = &AuthClaims{
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expTime.Unix(),
 		},
 		TokenType: "access",
-		UserID:    user_id,
+		UserID:    userID,
 	}
 
 	return t.SignedString(s.auth.accesskey)
 }
 
-func (s Server) createRefreshToken(user_id string, expTime time.Time) (string, error) {
+func (s Server) createRefreshToken(userID string, expTime time.Time) (string, error) {
 	t := jwt.New(jwt.GetSigningMethod("RS256"))
 	t.Claims = &AuthClaims{
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expTime.Unix(),
 		},
 		TokenType: "refresh",
-		UserID:    user_id,
+		UserID:    userID,
 	}
 
 	return t.SignedString(s.auth.refreshkey)
