@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
+	"github.com/gorilla/mux"
 )
 
 func (s Server) SigninHandler(w http.ResponseWriter, r *http.Request) {
@@ -178,4 +179,69 @@ func (s Server) GetUsersHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(users)
+}
+
+func (s Server) NewPantryHandler(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(ContextKey("props")).(string)
+	if !ok {
+		errString := fmt.Errorf("`UserID` field not found in token")
+		log.Print(errString)
+		http.Error(w, errString.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var newPantry NewPantryPayload
+	if err := json.NewDecoder(r.Body).Decode(&newPantry); err != nil {
+		errString := fmt.Errorf("error decoding new pantry form: %v", err)
+		log.Print(errString)
+		http.Error(w, errString.Error(), http.StatusBadRequest)
+		return
+	}
+
+	pantry, err := NewPantry(newPantry.Name, userID, s.DB)
+	if err != nil {
+		errString := fmt.Errorf("error creating new pantry: %v", err)
+		log.Print(errString)
+		http.Error(w, errString.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(*pantry)
+}
+
+func (s Server) GetPantryHandler(w http.ResponseWriter, r *http.Request) {
+	pantryID := mux.Vars(r)["pantry"]
+	// userID, ok := r.Context().Value(ContextKey("props")).(string)
+	// if !ok {
+	// 	errString := fmt.Errorf("`UserID` field not found in token")
+	// 	log.Print(errString)
+	// 	http.Error(w, errString.Error(), http.StatusBadRequest)
+	// 	return
+	// }
+
+	pantry, err := GetPantry(pantryID, s.DB)
+	if err != nil {
+		errString := fmt.Errorf("error finding pantry: %v", err)
+		log.Print(errString)
+		http.Error(w, err.Error(), http.StatusNoContent)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(pantry)
+}
+
+func (s Server) GetPantriesHandler(w http.ResponseWriter, r *http.Request) {
+	pantries, err := GetPantries(s.DB)
+	if err != nil {
+		errString := fmt.Errorf("error finding getting pantries: %v", err)
+		log.Print(errString)
+		http.Error(w, err.Error(), http.StatusNoContent)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(pantries)
 }

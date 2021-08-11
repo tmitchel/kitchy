@@ -14,6 +14,10 @@ type NewUserPayload struct {
 	Password string `json:"password"`
 }
 
+type NewPantryPayload struct {
+	Name string `json:"name"`
+}
+
 type SigninPayload struct {
 	Name     string `json:"name"`
 	Password string `json:"password"`
@@ -23,6 +27,7 @@ type AuthClaims struct {
 	jwt.StandardClaims
 	TokenType string
 	UserID    string
+	UserInfo  User
 }
 
 type AccessToken struct {
