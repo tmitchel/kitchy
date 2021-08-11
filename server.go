@@ -69,7 +69,7 @@ func (a authMiddleware) Middleware(next http.Handler) http.Handler {
 			})
 
 			if claims, ok := token.Claims.(*AuthClaims); ok && token.Valid {
-				ctx := context.WithValue(r.Context(), "props", claims.UserID)
+				ctx := context.WithValue(r.Context(), ContextKey("props"), claims.UserID)
 				// Access context values in handlers like this
 				// props, _ := r.Context().Value("props").(jwt.MapClaims)
 				next.ServeHTTP(w, r.WithContext(ctx))

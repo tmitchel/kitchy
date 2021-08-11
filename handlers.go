@@ -116,7 +116,7 @@ func (s Server) RefreshHandler(w http.ResponseWriter, r *http.Request) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		return []byte("secret"), nil
+		return []byte(s.auth.refreshkey), nil
 	})
 
 	if claims, ok := token.Claims.(*AuthClaims); ok && token.Valid {
@@ -147,7 +147,7 @@ func (s Server) RefreshHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Server) GetUserHandler(w http.ResponseWriter, r *http.Request) {
-	userID, ok := r.Context().Value("props").(jwt.MapClaims)["UserID"].(string)
+	userID, ok := r.Context().Value(ContextKey("props")).(string)
 	if !ok {
 		errString := fmt.Errorf("`UserID` field not found in token")
 		log.Print(errString)

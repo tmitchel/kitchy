@@ -24,3 +24,5 @@ type AccessToken struct {
 	Token     string
 	ExpiresAt int64
 }
+
+type ContextKey string
